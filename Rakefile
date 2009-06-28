@@ -3,9 +3,10 @@ require "time"
 DIR = File.dirname(__FILE__)
 Dir.chdir(DIR)
 
-task :load do
-  return unless date = ENV["DATE"]
-  system("perl ./hw.pl -c -l #{date}")
+desc "指定した日付の記事をロードします。rake load@2009-06-30"
+task :load,[:date] do |t, args|
+  raise "Usage: rake load@YYYY-MM-DD" unless args.date
+  system("perl ./hw.pl -c -l #{args.date}")
 end
 
 task :update do
@@ -43,4 +44,12 @@ task :touch do
   open("./text/touch.txt", "w") do |io|
     io << date.strftime("%Y%m%d%H%M%S")
   end
+end
+
+
+# タスク引数に@を使えるようにします。rake load@2009-07-01
+#   http://subtech.g.hatena.ne.jp/cho45/20080108/1199723301
+Rake.application.top_level_tasks.map! do |a|
+  name, vals = *a.split(/@/, 2)
+  vals ? "#{name}[#{vals}]" : a
 end
