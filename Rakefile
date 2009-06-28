@@ -18,9 +18,14 @@ task :load,[:date] do |t, args|
   system("perl ./hw.pl -c -l #{args.date}")
 end
 
-desc "はてなダイアリーを更新します。"
+desc "はてなダイアリーを更新します(ちょっとした更新)。"
 task :update do
   system("perl ./hw.pl -c -t")
+end
+
+desc "はてなダイアリーを更新します。"
+task :release do
+  system("perl ./hw.pl -c")
 end
 
 desc "初期化します。"
