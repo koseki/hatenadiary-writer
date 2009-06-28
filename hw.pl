@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# hw.pl - Hatena Diary Writer.
+# hw.pl - Hatena Diary Writer (with Loader).
 #
 # Copyright (C) 2004,2005,2007 by Hiroshi Yuki.
 # <hyuki@hyuki.com>
@@ -14,8 +14,14 @@
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
+# 'Hatena Diary Loader' originally written by Hahahaha(id:rin_ne)
+#    http://d.hatena.ne.jp/rin_ne/20040825#p7
+#
+# Modified by Koseki Kengo (id:koseki2)
+#    http://d.hatena.ne.jp/koseki2/
+#
 use strict;
-my $VERSION = "1.4.1";
+my $VERSION = "1.4.1.1";
 
 use LWP::UserAgent;
 use HTTP::Request::Common;
@@ -57,6 +63,9 @@ my $touch_file = 'touch.txt';
 my $cookie_file = 'cookie.txt';
 my $config_file = 'config.txt';
 my $target_file = '';
+
+# Load diary date.
+my $load_date = '';
 
 # Filter command.
 # e.g. 'iconv -f euc-jp -t utf-8 %s'
@@ -112,10 +121,11 @@ my %cmd_opt = (
     'M' => 0,   # "no timestamp" flag.
     'n' => "",  # "config file" option.
     'S' => 1,   # "SSL" option. This is always 1. Set 0 to login older hatena server.
+    'l' => "",  # "load" diary.
 );
 
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-getopts("tdu:p:a:T:cg:f:Mn:", \%cmd_opt) or error_exit("Unknown option.");
+getopts("tdu:p:a:T:cg:f:Mn:l:", \%cmd_opt) or error_exit("Unknown option.");
 
 if ($cmd_opt{d}) {
     print_debug("Debug flag on.");
@@ -137,6 +147,7 @@ $groupname = $cmd_opt{g} if $cmd_opt{g};
 $ua_option{agent} = $cmd_opt{a} if $cmd_opt{a};
 $ua_option{timeout} = $cmd_opt{T} if $cmd_opt{T};
 $target_file = $cmd_opt{f} if $cmd_opt{f};
+$load_date = $cmd_opt{l} if $cmd_opt{l};
 
 # Change $hatena_url to Hatena group URL if ($groupname is defined).
 if ($groupname) {
@@ -144,10 +155,33 @@ if ($groupname) {
 }
 
 # Start.
-&main;
+if (! $cmd_opt{l}) {
+  &main;
+} else {
+  &load_main;
+}
 
 # no-error exit.
 exit(0);
+
+
+# Load diary main sequence. -l option
+sub load_main {
+    if ($load_date !~ /\A(\d\d\d\d)-(\d\d)-(\d\d)(?:\.txt)?\Z/) {
+	error_exit("Illegal date format.");
+    }
+    my ($year, $month, $day) = ($1, $2, $3);
+
+    # Login if necessary.
+    login() unless ($user_agent);
+
+    print_message("Load $year-$month-$day.");
+    load_diary_entry($year,$month,$day);
+    print_message("Load OK.");
+
+    logout if ($user_agent);
+}
+
 
 # Main sequence.
 sub main {
@@ -425,7 +459,7 @@ sub delete_it($) {
 
     # Check the result. ERROR if the location ends with the date.
     # (Note that delete error != post error)
-    if ($r->header("Location") =~ m(/$date$)) {
+    if ($r->header("Location") =~ m(/$date$)) {                    # /)){
         print_debug("delete_it: returns 0 (ERROR).");
         return 0;
     } else {
@@ -472,7 +506,7 @@ sub create_it($$$) {
     print_debug("create_it: Location: " . $r->header("Location"));
 
     # Check the result. OK if the location ends with the date.
-    if ($r->header("Location") =~ m(/$year$month$day$)) {
+    if ($r->header("Location") =~ m(/$year$month$day$)) {          # /)){
         print_debug("create_it: returns 1 (OK).");
         return 1;
     } else {
@@ -522,7 +556,7 @@ sub post_it($$$$$$) {
     print_debug("post_it: Location: " . $r->header("Location"));
 
     # Check the result. OK if the location ends with the date.
-    if ($r->header("Location") =~ m(/$year$month$day$)) {
+    if ($r->header("Location") =~ m(/$year$month$day$)) {          # /)){
         print_debug("post_it: returns 1 (OK).");
         return 1;
     } else {
@@ -549,7 +583,7 @@ sub get_timestamp() {
 # Show version message. This is called by getopts.
 sub VERSION_MESSAGE {
     print <<"EOD";
-Hatena Diary Writer Version $VERSION
+Hatena Diary Writer(+Loader) Version $VERSION
 Copyright (C) 2004,2005 by Hiroshi Yuki.
 EOD
 }
@@ -665,6 +699,7 @@ Options:
     -f filename     File. Send only this file without checking timestamp.
     -M              Do NOT replace *t* with current time.
     -n config_file  Config file. Default value is $config_file.
+    -l YYYY-MM-DD   Load diary.
 
 Config file example:
 #
@@ -732,5 +767,127 @@ sub load_config() {
         }
     }
     close(CONF);
+}
+
+
+# from hateda loader
+
+# Load entry.
+sub load_diary_entry($$$) {
+    my ($year, $month, $day) = @_;
+    my $load_retry = 0;
+    my $ok = 0;
+
+LOAD_RETRY:
+    while ($load_retry < 2) {
+        # Load.
+        $ok = load_it($year, $month, $day);
+        if ($ok or not $cmd_opt{c}) {
+            last;
+        }
+        print_debug("load_diary_entry: LOAD_RETRY.");
+        unlink($cookie_file);
+        print_message("Old cookie. Retry login.");
+        login();
+        $load_retry++;
+    }
+
+    if (not $ok) {
+        error_exit("load_diary_entry: get: Check username/password.");
+    }
+}
+
+# Load.
+sub load_it($$$) {
+    my ($year, $month, $day) = @_;
+
+    print_debug("load_it: $hatena_url/$username/edit?date=$year$month$day");
+
+    $user_agent->cookie_jar($cookie_jar);
+
+    my $r = $user_agent->simple_request(
+        HTTP::Request::Common::GET("$hatena_url/$username/edit?date=$year$month$day"));
+
+    print_debug("load_it: " . $r->status_line);
+
+    if (not $r->is_success()) {
+        error_exit("Load: Unexpected response: ", $r->status_line);
+    }
+
+    # Check entry exist.
+    $r->content =~ /<form .*?action="\.\/edit" .*?>(.*<\/textarea>)/s;
+    my $form_data = $1;
+
+    $form_data =~ /<input type="hidden" name="date" value="(\d\d\d\d\d\d\d\d)">/;
+    my $resp_date = $1;
+
+    if($resp_date ne "$year$month$day") {
+        error_exit("Load: Not exist entry.");
+    }
+    
+    # Get title and body.
+    $form_data =~ /<input class="field" name="title" .*?value="(.*?)">/;
+    my $title = $1 . "\n";
+    $form_data =~ /<textarea .*?>(.*?)<\/textarea>/s;
+    my $body = $1;
+    
+    # Escape string.
+    $title = sanitize($title);
+    $body = sanitize($body);
+    
+    # Convert encodings.
+    if ($enable_encode and ($client_encoding ne $server_encoding)) {
+        print_debug("Convert from $client_encoding to $server_encoding.");
+        Encode::from_to($title, $server_encoding, $client_encoding);
+        Encode::from_to($body, $server_encoding, $client_encoding);
+    }
+
+    # Save entry to file.
+    my $datename = "$year-$month-$day";
+    
+    my $filename = "$txt_dir/$datename.txt";
+    # Check if file is exist. (Skip)
+    if(0 && -f "$filename") {
+        my $bakext = 0;
+        while(-f "$filename.$bakext") {
+            $bakext++;
+        }
+        if (not rename("$filename", "$filename.$bakext")) {
+            error_exit("$!:$filename");
+        }
+    }
+
+    if (not open(OUT, ">$filename")) {
+        error_exit("$!:$filename");
+    }
+    
+    print OUT $title;
+    print OUT $body;
+    close(OUT);
+    
+    print_debug("load_it: returns 1 (OK).");
+    return 1;
+}
+
+# Sanitize.
+sub sanitize($) {
+    my $str = $_[0];
+
+    my @escape_string = (
+        "&lt;<",
+        "&gt;>",
+        "&quot;\"",
+        "&nbsp; ",
+    );
+    
+    for(@escape_string) {
+        my ($from, $to) = split(/;/);
+        $str =~ s/$from;/$to/sg;
+    }
+    
+    $str =~ s/&#(\d+);/chr($1)/seg;
+    $str =~ s/&amp;/&/sg;
+    
+    return $str;
 }
 __END__
