@@ -1,0 +1,5 @@
+= hatenadiary-koseki2
+
+はてなダイアリーの記事です。
+* http://d.hatena.ne.jp/koseki2/
+
