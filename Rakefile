@@ -2,6 +2,15 @@ require "time"
 
 DIR = File.dirname(__FILE__)
 Dir.chdir(DIR)
+$:.unshift("./lib")
+
+# タスク引数に@を使えるようにします。rake load@2009-07-01
+#   http://subtech.g.hatena.ne.jp/cho45/20080108/1199723301
+Rake.application.top_level_tasks.map! do |a|
+  name, vals = *a.split(/@/, 2)
+  vals ? "#{name}[#{vals}]" : a
+end
+
 
 desc "指定した日付の記事をロードします。rake load@2009-06-30"
 task :load,[:date] do |t, args|
@@ -9,10 +18,12 @@ task :load,[:date] do |t, args|
   system("perl ./hw.pl -c -l #{args.date}")
 end
 
+desc "はてなダイアリーを更新します。"
 task :update do
   system("perl ./hw.pl -c -t")
 end
 
+desc "初期化します。"
 task :init do
   mkdir "text" unless File.exist?("text")
 
@@ -35,21 +46,16 @@ EOT
   chmod(0600, "cookie.txt")
 end
 
-task :touch do
-  if ENV["DATE"]
-    date = Time.parse(ENV["DATE"])
-  else
-    date = Time.now
-  end
+desc "touch.txtに現在時刻を書き込みます。現在までの修正はアップロードされなくなります。"
+task :touch,[:date] do |t,args|
+  date = args.date ? Time.parse(args.date) : Time.now
   open("./text/touch.txt", "w") do |io|
     io << date.strftime("%Y%m%d%H%M%S")
   end
 end
 
-
-# タスク引数に@を使えるようにします。rake load@2009-07-01
-#   http://subtech.g.hatena.ne.jp/cho45/20080108/1199723301
-Rake.application.top_level_tasks.map! do |a|
-  name, vals = *a.split(/@/, 2)
-  vals ? "#{name}[#{vals}]" : a
+desc "プレビューサーバを起動します。"
+task :server,[:port] do |t,args|
+  require "hatena_preview_server"
+  HatenaPreviewServer.start("./text", args.port)
 end
