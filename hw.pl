@@ -17,11 +17,11 @@
 # 'Hatena Diary Loader' originally written by Hahahaha(id:rin_ne)
 #    http://d.hatena.ne.jp/rin_ne/20040825#p7
 #
-# Modified by Koseki Kengo (id:koseki2)
+# Modified by Kengo Koseki (id:koseki2)
 #    http://d.hatena.ne.jp/koseki2/
 #
 use strict;
-my $VERSION = "1.4.1.1";
+my $VERSION = "1.4.1.2";
 
 use LWP::UserAgent;
 use HTTP::Request::Common;
@@ -168,7 +168,7 @@ exit(0);
 # Load diary main sequence. -l option
 sub load_main {
     if ($load_date !~ /\A(\d\d\d\d)-(\d\d)-(\d\d)(?:\.txt)?\Z/) {
-	error_exit("Illegal date format.");
+        error_exit("Illegal date format.");
     }
     my ($year, $month, $day) = ($1, $2, $3);
 
@@ -584,7 +584,7 @@ sub get_timestamp() {
 sub VERSION_MESSAGE {
     print <<"EOD";
 Hatena Diary Writer(+Loader) Version $VERSION
-Copyright (C) 2004,2005 by Hiroshi Yuki.
+Copyright (C) 2004,2005,2007,2009 by Hiroshi Yuki / +Loader by Kengo Koseki.
 EOD
 }
 
@@ -826,8 +826,10 @@ sub load_it($$$) {
     }
     
     # Get title and body.
-    $form_data =~ /<input class="field" name="title" .*?value="(.*?)">/;
-    my $title = $1 . "\n";
+    my $title = "";
+    if ($form_data =~ /<input name="title" .*?value="(.*?)"/) {
+        $title = $1;
+    }
     $form_data =~ /<textarea .*?>(.*?)<\/textarea>/s;
     my $body = $1;
     
@@ -861,7 +863,7 @@ sub load_it($$$) {
         error_exit("$!:$filename");
     }
     
-    print OUT $title;
+    print OUT $title."\n";
     print OUT $body;
     close(OUT);
     
