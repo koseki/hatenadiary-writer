@@ -4,11 +4,24 @@
 
 - http://www.hyuki.com/techinfo/hatena_diary_writer.html
 
+== オリジナル版hw.plとの違い。
 
-== オリジナル版との違い
+hw.plには以下の修正が加えられています。
 
-このスクリプトには以下の修正が加えられています。
+- ハハハハ(id:rin_ne)さん作成の、はてなダイアリーローダの取り込み。
 
-- ハハハハさん(id:rin_ne) によるはてなダイアリーローダの取り込み。
+== Rakefileについて。
 
+rakeを使って以下の操作ができます。
 
+- rake init ... 環境の初期設定。
+  - textディレクトリ作成。
+  - config.txtのひな形作成。
+  - cookie.txtを作成しパーミッションを0600に設定。
+- rake server ... プレビューサーバ起動。
+  - http://localhost:8080/ でプレビューを表示。
+  - rake server@8081 のようにしてポート番号を指定。
+- rake load@2009-07-01 ... 記事データの取り込み。
+- rake update ... はてなダイアリー更新(-tオプション付き。ちょっとした更新)
+- rake release ... はてなダイアリー更新(-tオプション無し。通常の更新)
+- rake touch ... touch.txtを現在時刻に設定。今までの修正を更新に含めない。
