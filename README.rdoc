@@ -1,5 +1,14 @@
-= hatenadiary-koseki2
+= hatenadiary-writer
 
-はてなダイアリーの記事です。
-* http://d.hatena.ne.jp/koseki2/
+はてなダイアリーライター(はてダラ)は、テキストファイルではてなダイアリーを更新するためのスクリプトです。結城浩さんによって2004年8月に公開されました。
+
+- http://www.hyuki.com/techinfo/hatena_diary_writer.html
+
+
+== オリジナル版との違い
+
+このスクリプトには以下の修正が加えられています。
+
+- ハハハハさん(id:rin_ne) によるはてなダイアリーローダの取り込み。
+
 
