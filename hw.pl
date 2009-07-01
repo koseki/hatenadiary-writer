@@ -29,6 +29,7 @@ use HTTP::Cookies;
 use File::Basename;
 use Getopt::Std;
 use Digest::MD5 qw(md5_base64);
+use File::Temp qw(tempdir tempfile);
 
 my $enable_encode = eval('use Encode; 1');
 
@@ -66,6 +67,8 @@ my $target_file = '';
 
 # Load diary date.
 my $load_date = '';
+# Diff diary date.
+my $diff_date = '';
 
 # Filter command.
 # e.g. 'iconv -f euc-jp -t utf-8 %s'
@@ -122,10 +125,11 @@ my %cmd_opt = (
     'n' => "",  # "config file" option.
     'S' => 1,   # "SSL" option. This is always 1. Set 0 to login older hatena server.
     'l' => "",  # "load" diary.
+    'D' => "",  # "diff" option.
 );
 
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-getopts("tdu:p:a:T:cg:f:Mn:l:", \%cmd_opt) or error_exit("Unknown option.");
+getopts("tdu:p:a:T:cg:f:Mn:l:D:", \%cmd_opt) or error_exit("Unknown option.");
 
 if ($cmd_opt{d}) {
     print_debug("Debug flag on.");
@@ -148,6 +152,7 @@ $ua_option{agent} = $cmd_opt{a} if $cmd_opt{a};
 $ua_option{timeout} = $cmd_opt{T} if $cmd_opt{T};
 $target_file = $cmd_opt{f} if $cmd_opt{f};
 $load_date = $cmd_opt{l} if $cmd_opt{l};
+$diff_date = $cmd_opt{D} if $cmd_opt{D};
 
 # Change $hatena_url to Hatena group URL if ($groupname is defined).
 if ($groupname) {
@@ -155,33 +160,61 @@ if ($groupname) {
 }
 
 # Start.
-if (! $cmd_opt{l}) {
-  &main;
-} else {
+if ($cmd_opt{l}) {
   &load_main;
+} elsif ($cmd_opt{D}) {
+  &diff_main;
+} else {
+  &main;
 }
 
 # no-error exit.
 exit(0);
 
-
 # Load diary main sequence. -l option
 sub load_main {
-    if ($load_date !~ /\A(\d\d\d\d)-(\d\d)-(\d\d)(?:\.txt)?\Z/) {
-        error_exit("Illegal date format.");
-    }
-    my ($year, $month, $day) = ($1, $2, $3);
+    my ($year, $month, $day) = parse_date($load_date);
 
     # Login if necessary.
     login() unless ($user_agent);
 
     print_message("Load $year-$month-$day.");
-    load_diary_entry($year,$month,$day);
+    my ($title, $body) = load_diary_entry($year,$month,$day);
+    save_diary_entry($year,$month,$day,$title,$body);
     print_message("Load OK.");
 
     logout if ($user_agent);
 }
 
+sub diff_main {
+    my ($year, $month, $day) = parse_date($diff_date);
+
+    # Login if necessary.
+    login() unless ($user_agent);
+
+    print_message("Diff $year-$month-$day.");
+    my ($title, $body) = load_diary_entry($year,$month,$day);
+    logout if ($user_agent);
+
+    my $src = $title."\n".$body;
+
+    my $tmpdir = tempdir(CLEANUP => 1);
+    my($fh, $tmpfilename) = tempfile('diff_XXXXXX', DIR => $tmpdir);
+    print $fh $src;
+    close $fh;
+
+    my $filename = text_filename($year,$month,$day);
+    my $cmd = "diff $tmpfilename $filename";
+    system $cmd;
+}
+
+sub parse_date($) {
+    my ($date) = @_;
+    if ($date !~ /\A(\d\d\d\d)-(\d\d)-(\d\d)(?:\.txt)?\Z/) {
+        error_exit("Illegal date format.");
+    }
+    return ($1, $2, $3);
+}
 
 # Main sequence.
 sub main {
@@ -775,31 +808,6 @@ sub load_config() {
 # Load entry.
 sub load_diary_entry($$$) {
     my ($year, $month, $day) = @_;
-    my $load_retry = 0;
-    my $ok = 0;
-
-LOAD_RETRY:
-    while ($load_retry < 2) {
-        # Load.
-        $ok = load_it($year, $month, $day);
-        if ($ok or not $cmd_opt{c}) {
-            last;
-        }
-        print_debug("load_diary_entry: LOAD_RETRY.");
-        unlink($cookie_file);
-        print_message("Old cookie. Retry login.");
-        login();
-        $load_retry++;
-    }
-
-    if (not $ok) {
-        error_exit("load_diary_entry: get: Check username/password.");
-    }
-}
-
-# Load.
-sub load_it($$$) {
-    my ($year, $month, $day) = @_;
 
     print_debug("load_it: $hatena_url/$username/edit?date=$year$month$day");
 
@@ -832,11 +840,11 @@ sub load_it($$$) {
     }
     $form_data =~ /<textarea .*?>(.*?)<\/textarea>/s;
     my $body = $1;
-    
-    # Escape string.
-    $title = sanitize($title);
-    $body = sanitize($body);
-    
+
+    # Unescape string.
+    $title = unescape($title);
+    $body = unescape($body);
+
     # Convert encodings.
     if ($enable_encode and ($client_encoding ne $server_encoding)) {
         print_debug("Convert from $client_encoding to $server_encoding.");
@@ -844,12 +852,37 @@ sub load_it($$$) {
         Encode::from_to($body, $server_encoding, $client_encoding);
     }
 
-    # Save entry to file.
+    print_debug("load_it: OK");
+    return ($title, $body);
+}
+
+sub text_filename($$$) {
+    my ($year,$month,$day) = @_;
     my $datename = "$year-$month-$day";
-    
     my $filename = "$txt_dir/$datename.txt";
+    return $filename;
+}
+
+sub save_diary_entry($$$$) {
+    my ($year,$month,$day,$title,$body) = @_;
+    my $filename = text_filename($year,$month,$day);
+
+    # backup($filename);
+    
+    if (not open(OUT, ">$filename")) {
+        error_exit("$!:$filename");
+    }
+    print OUT $title."\n";
+    print OUT $body;
+    close(OUT);
+    print_debug("save_diary_entry: return 1 (OK)");
+    return 1;
+}
+
+sub backup($) {
+    my ($filename) = @_;
     # Check if file is exist. (Skip)
-    if(0 && -f "$filename") {
+    if(-f "$filename") {
         my $bakext = 0;
         while(-f "$filename.$bakext") {
             $bakext++;
@@ -858,23 +891,10 @@ sub load_it($$$) {
             error_exit("$!:$filename");
         }
     }
-
-    if (not open(OUT, ">$filename")) {
-        error_exit("$!:$filename");
-    }
-    
-    print OUT $title."\n";
-    print OUT $body;
-    close(OUT);
-    
-    print_debug("load_it: returns 1 (OK).");
-    return 1;
 }
 
-# Sanitize.
-sub sanitize($) {
-    my $str = $_[0];
-
+sub unescape($) {
+    my ($str) = @_;
     my @escape_string = (
         "&lt;<",
         "&gt;>",
