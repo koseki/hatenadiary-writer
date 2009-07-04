@@ -1,5 +1,7 @@
 require "time"
 
+HW = "perl ./hw.pl -c"
+
 DIR = File.dirname(__FILE__)
 Dir.chdir(DIR)
 $:.unshift("./lib")
@@ -15,17 +17,18 @@ end
 desc "指定した日付の記事をロードします。rake load@2009-06-30"
 task :load,[:date] do |t, args|
   raise "Usage: rake load@YYYY-MM-DD" unless args.date
-  system("perl ./hw.pl -c -l #{args.date}")
+  date = dateargs(args)
+  system("#{HW} -l #{date}")
 end
 
 desc "はてなダイアリーを更新します(ちょっとした更新)。"
 task :update do
-  system("perl ./hw.pl -c -t")
+  system("#{HW} -t")
 end
 
 desc "はてなダイアリーを更新します。"
 task :release do
-  system("perl ./hw.pl -c")
+  system(HW)
 end
 
 desc "初期化します。"
@@ -67,14 +70,40 @@ end
 
 desc "更新されるファイル一覧を表示します。"
 task :status do
-  date = File.stat("./text/touch.txt").mtime
-  # puts "touch.txt: " + date.rfc822
+  touchdate = File.stat("./text/touch.txt").mtime
+  # puts "#{touchdate.strftime("%Y-%m-%d %H:%M")}  text/touch.txt"
+  upfiles.each do |f|
+    mtime = File.stat(f).mtime
+    puts "#{mtime.strftime("%Y-%m-%d %H:%M")}  #{f}"
+  end
+end
+
+desc "公開されている日記とのdiffを表示します。"
+task :diff,[:date] do |t,args|
+  if args.date
+    system "#{HW} -D #{datearg(args)}"
+  else
+    upfiles.each do |f|
+      system "#{HW} -D #{f.pathmap("%n")}"
+    end
+  end
+end
+
+
+
+def upfiles
+  touchdate = File.stat("./text/touch.txt").mtime
+  result = []
   FileList["text/*.txt"].each do |f|
     next unless f =~ %r{/\d{4}-\d{2}-\d{2}(?:-.+)?\.txt$}
     mtime = File.stat(f).mtime
-    if date < mtime
-      puts "#{f}\t#{mtime.rfc822}"
-    end
+    result << f if touchdate < mtime
   end
-
+  return result
 end
+
+def datearg(args)
+  return Time.parse(args.date).strftime("%Y-%m-%d")
+end
+
+
