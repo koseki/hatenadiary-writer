@@ -239,12 +239,11 @@ sub main {
     for (@files) {
         # Check file name.
         next unless (/\b(\d\d\d\d)-(\d\d)-(\d\d)(?:-.+)?\.txt$/);
+        # Check if it is a file.
+        next unless (-f $_);
 
         my ($year, $month, $day) = ($1, $2, $3);
         my $date = $year . $month . $day;
-
-        # Check if it is a file.
-        next unless (-f $_);
 
         # Login if necessary.
         login() unless ($user_agent);
@@ -859,6 +858,13 @@ sub load_diary_entry($$$) {
 sub text_filename($$$) {
     my ($year,$month,$day) = @_;
     my $datename = "$year-$month-$day";
+
+    while (glob("$txt_dir/*.txt")) {
+        next unless (/\b(\d\d\d\d-\d\d-\d\d)(?:-.+)?\.txt$/);
+        next unless (-f $_);
+        return $_ if $datename eq $1
+    }
+
     my $filename = "$txt_dir/$datename.txt";
     return $filename;
 }
