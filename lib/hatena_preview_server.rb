@@ -34,11 +34,11 @@ class HatenaPreviewHandler < WEBrick::HTTPServlet::DefaultFileHandler
   end
 
   def do_GET(req,res)
-    if @local_path !~ %r{/(\d{4}-\d{2}-\d{2})\.txt$}
+    if @local_path !~ %r{/(\d{4}-\d{2}-\d{2})(?:-.+)?\.txt$}
       super
       return
     end
-    date = Time.parse($1).strftime("%Y-%m-%d")
+    date = Time.parse($1)
     
     src = File.read(@local_path)
     (title, body) = src.split(/\r\n|\r|\n/, 2)

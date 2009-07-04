@@ -210,7 +210,7 @@ sub diff_main {
 
 sub parse_date($) {
     my ($date) = @_;
-    if ($date !~ /\A(\d\d\d\d)-(\d\d)-(\d\d)(?:\.txt)?\Z/) {
+    if ($date !~ /\A(\d\d\d\d)-(\d\d)-(\d\d)(?:-.+)?(?:\.txt)?\Z/) {
         error_exit("Illegal date format.");
     }
     return ($1, $2, $3);
@@ -238,7 +238,7 @@ sub main {
     # Process it.
     for (@files) {
         # Check file name.
-        next unless (/\b(\d\d\d\d)-(\d\d)-(\d\d)\.txt$/);
+        next unless (/\b(\d\d\d\d)-(\d\d)-(\d\d)(?:-.+)?\.txt$/);
 
         my ($year, $month, $day) = ($1, $2, $3);
         my $date = $year . $month . $day;

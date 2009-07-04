@@ -70,7 +70,7 @@ task :status do
   date = File.stat("./text/touch.txt").mtime
   # puts "touch.txt: " + date.rfc822
   FileList["text/*.txt"].each do |f|
-    next unless f =~ %r{/\d{4}-\d{2}-\d{2}\.txt$}
+    next unless f =~ %r{/\d{4}-\d{2}-\d{2}(?:-.+)?\.txt$}
     mtime = File.stat(f).mtime
     if date < mtime
       puts "#{f}\t#{mtime.rfc822}"
