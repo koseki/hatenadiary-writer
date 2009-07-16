@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<title>githubブラウザ - はてなダイアリープレビュー</title>
+<link rel="stylesheet" href="http://d.hatena.ne.jp/css/base.css" type="text/css" media="all">
+<link rel="stylesheet" href="http://d.hatena.ne.jp/theme/hatena/hatena.css" type="text/css" media="all">
+</head>
+<body>
+
+<div class="hatena-body">
+<div class="main">
+
+<div id="pager-top" class="calendar">
+<a class="prev" href="#" rel="prev">&lt;前のリビジョン</a>
+<span class="delimiter">|</span>
+<a class="next" href="#" rel="next">次のリビジョン&gt;</a>
+</div>
+
+<div id="days">
+<div class="day">
+<h2>
+<span class="title">
+<%= Time.parse(current["committed_date"]).strftime("%Y-%m-%d") %>
+/
+<a href="/github/">github</a>
+/
+<a href="/github/<%=h @user %>"><%=h @user %></a>
+/
+<a href="/github/<%=h @user %>/<%=h @repos %>"><%=h @repos %></a>
+<%- if @sha -%>
+/ <a href="/github/<%=h @user %>/<%=h @repos %>/commit/<%=h @sha %>">tree</a> / <%=h @sha %>
+<%- else -%>
+/ tree / master
+<%- end -%>
+</span></h2>
+
+<div class="body">
+
+<div class="section">
+<p>
+<%=h current["message"] %>
+</p>
+
+<ul>
+<%- tree.each do |item| -%>
+<li><a href="<%=h item["sha"] %>"><%=h item["name"] %></a></li>
+<%- end -%>
+
+</ul>
+</div>
+
+</div>
+
+<h2><span class="title">Log</span></h2>
+
+<div class="body">
+<ul>
+<%- @c.commits.each do |commit| -%>
+<li><a href="/github/<%=h @user %>/<%=h @repos %>/commit/<%=h commit["id"] %>"><%= Time.parse(commit["committed_date"]).strftime("%Y-%m-%d") %></a> <%= commit["message"] %>
+
+<% #= commit.inspect %>
+</li>
+<%- end -%>
+</ul>
+</div>
+
+</div></div></div></div>
+</body></html>

@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<title>githubブラウザ - はてなダイアリープレビュー</title>
+<link rel="stylesheet" href="http://d.hatena.ne.jp/css/base.css" type="text/css" media="all">
+<link rel="stylesheet" href="http://d.hatena.ne.jp/theme/hatena/hatena.css" type="text/css" media="all">
+</head>
+<body>
+
+<div class="hatena-body">
+<div class="main">
+<div id="days">
+<div class="day">
+
+<h2>
+<span class="title">
+<a href="/github/">github</a>
+<%- if @user -%>
+/
+<a href="/github/<%=h @user %>"><%=h @user %></a>
+<%- end -%>
+</span>
+</h2>
+
+<div class="body">
+<div class="section">
+<ul>
+<%- result.each do |prj| -%>
+<%- if prj["description"].to_s =~ /\bid:\w+/ -%>
+<li><a href="/github/<%= prj["username"] %>/<%= prj["name"] %>/">
+<%=h prj["username"] %>/<%=h prj["name"] %>
+</a> - <%=h(prj["description"]).gsub(/\bid:(\w+)/, %{<a href="http://d.hatena.ne.jp/\\1/">id:\\1</a>}) %>
+</li>
+<%- end -%>
+<%- end -%>
+</ul>
+
+<ul>
+<%- result.each do |prj| -%>
+<%- if prj["description"].to_s !~ /\bid:\w+/ -%>
+<li><a href="/github/<%= prj["username"] %>/<%= prj["name"] %>/">
+<%=h prj["username"] %>/<%=h prj["name"] %>
+</a> - <%=h prj["description"] %>
+</li>
+<%- end -%>
+<%- end -%>
+</ul>
+
+</div>
+
+</div>
+</div></div></div></div>
+</body></html>
