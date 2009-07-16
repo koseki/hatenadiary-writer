@@ -51,38 +51,41 @@ class GithubBrowserServlet < WEBrick::HTTPServlet::AbstractServlet
   def tree
     @c ||= GithubClient.new(@user, @repos)
     tree = @c.tree(@sha)
+    commits = @c.commits
     if @sha
-      current = @c.commits.find {|item| item["id"] == @sha }
+      current = commits.find {|item| item["id"] == @sha }
     else
-      current = @c.commits.first
+      current = commits.first
     end
+    (prev_link, next_link) = navi_links(commits, current)
     @res.body = template(:tree).result(binding)
   end
 
   def commit
     @c ||= GithubClient.new(@user, @repos)
-    @c.load_commits
+    commits = @c.load_commits
     current = @c.commit(@sha)
+    (prev_link, next_link) = navi_links(commits, current)
     @res.body = template(:commit).result(binding)
   end
 
   def blob
+    unless @path =~ %r{/(\d{4}-\d{2}-\d{2})(?:-.+)?\.txt$}
+      raise "Not implemented yet." # TODO redirect to github
+    end
+    date = Time.parse($1)
+
     @c ||= GithubClient.new(@user, @repos)
-    @c.load_commits(@path)
+    commits = @c.load_commits(@path) #FIXME This works only at root tree.
     current = @c.commit(@sha)
-    (title,body) = hatena_entry
+    bloob = @c.blob(current["tree"], @path)
+    (title,body) = hatena_entry(bloob["data"])
+    (prev_link, next_link) = navi_links(commits, current)
     @res.body = template(:blob).result(binding)
   end
 
-  def hatena_entry
-    unless @path =~ %r{/(\d{4}-\d{2}-\d{2})(?:-.+)?\.txt$}
-      return [nil, nil]
-    end
-    date = Time.parse($1)
-    src = @c.raw(@sha, @path)
-
+  def hatena_entry(src)
     (title, body) = src.split(/\r\n|\r|\n/, 2)
-
     parser = Text::Hatena.new
     parser.parse(body)
     body = parser.html
@@ -91,6 +94,17 @@ class GithubBrowserServlet < WEBrick::HTTPServlet::AbstractServlet
 
   def template(name)
     ERB.new(File.read(TEMPLATES_DIR + "/#{name.to_s}.erb"), nil, "%-")
+  end
+
+  def navi_links(commits, current)
+    result = [nil, nil]
+    commits.each_with_index do |com, i|
+      if com["id"] == current["id"]
+        result[1] = commits[i - 1]["id"] if 0 < i
+        result[0] = commits[i + 1]["id"] if i < commits.length - 1
+      end
+    end
+    return result
   end
 
 end

@@ -3,7 +3,7 @@ require "open-uri"
 class GithubClient
   attr_reader :commits
 
-  ROOT  = "http://github.com/api/v2/yaml"
+  ROOT = "http://github.com/api/v2/yaml"
 
   def initialize(user, repos)
     @user = user
@@ -57,27 +57,14 @@ class GithubClient
     return GithubClient.load_yaml(uri)
   end
 
-  def blob(commit_sha, path)
-    commit = commit(commit_sha)
-    sha = commit["tree"]
-    tree = _tree(sha)
-    fname = path.split("/").last
-    id = nil
-    tree.each do |item|
-      if item["fname"] == fname
-        id = item["id"]
-        break
-      end
+  def blob(tree_sha, fname)
+    unless @objects[tree_sha + fname]
+      uri = "#{ROOT}/blob/show/#{@user}/#{@repos}/#{tree_sha}/#{fname}"
+      response = load_yaml(uri)
+      response = response["blob"]
+      @objects[response["sha"]] = @objects[tree_sha + fname] = response
     end
-
-    id = commit["id"]
-    unless @objects[id]
-      uri = "#{ROOT}/blob/show/#{@user}/#{@repos}/#{id}"
-      open(uri) do |io|
-        @objects[id] = io.read
-      end
-    end
-    return @objects[id]
+    return @objects[tree_sha + fname]
   end
 
   def self.load_yaml(uri)

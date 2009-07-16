@@ -13,11 +13,19 @@
 <div class="hatena-body">
 <div class="main">
 
+
 <div id="pager-top" class="calendar">
-<a class="prev" href="#" rel="prev">&lt;前のリビジョン</a>
+<%- if prev_link -%>
+<a class="prev" href="/github/<%=u @user %>/<%=u @repos %>/tree/<%= prev_link %>" rel="prev">&lt;前のリビジョン</a>
+<%- end -%>
+<%- if prev_link && next_link -%>
 <span class="delimiter">|</span>
-<a class="next" href="#" rel="next">次のリビジョン&gt;</a>
+<%- end -%>
+<%- if next_link -%>
+<a class="next" href="/github/<%=u @user %>/<%=u @repos %>/tree/<%= next_link %>" rel="next">次のリビジョン&gt;</a>
+<%- end -%>
 </div>
+
 
 <div id="days">
 <div class="day">
@@ -27,11 +35,11 @@
 /
 <a href="/github/">github</a>
 /
-<a href="/github/<%=h @user %>"><%=h @user %></a>
+<a href="/github/<%=u @user %>"><%=h @user %></a>
 /
-<a href="/github/<%=h @user %>/<%=h @repos %>"><%=h @repos %></a>
+<a href="/github/<%=u @user %>/<%=u @repos %>"><%=h @repos %></a>
 <%- if @sha -%>
-/ <a href="/github/<%=h @user %>/<%=h @repos %>/commit/<%=h @sha %>">tree</a> / <%=h @sha %>
+/ <a href="/github/<%=u @user %>/<%=u @repos %>/commit/<%=u @sha %>">tree</a> / <%=h @sha %>
 <%- else -%>
 / tree / master
 <%- end -%>
@@ -41,12 +49,12 @@
 
 <div class="section">
 <p>
-<%=h current["message"] %>
+<%=h current["message"] %> [ <a href="http://github.com/<%=u @user%>/<%=u @repos %>/commit/<%=u @sha %>">diff</a> ]
 </p>
 
 <ul>
 <%- tree.each do |item| -%>
-<li><a href="<%=h item["sha"] %>"><%=h item["name"] %></a></li>
+<li><a href="/github/<%=u @user %>/<%=u @repos %>/blob/<%=u current["id"] %>/<%=u item["name"] %>"><%=h item["name"] %></a></li>
 <%- end -%>
 
 </ul>
@@ -58,8 +66,8 @@
 
 <div class="body">
 <ul>
-<%- @c.commits.each do |commit| -%>
-<li><a href="/github/<%=h @user %>/<%=h @repos %>/commit/<%=h commit["id"] %>"><%= Time.parse(commit["committed_date"]).strftime("%Y-%m-%d") %></a> <%= commit["message"] %>
+<%- commits.each do |commit| -%>
+<li><a href="/github/<%=u @user %>/<%=u @repos %>/commit/<%=u commit["id"] %>"><%= Time.parse(commit["committed_date"]).strftime("%Y-%m-%d") %></a> <%= commit["message"] %>
 
 <% #= commit.inspect %>
 </li>
