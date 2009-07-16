@@ -1,7 +1,7 @@
 class HatenaPreviewHandler < WEBrick::HTTPServlet::DefaultFileHandler
   include ERB::Util
 
-  TEMPLATE = ERB.new(File.read(File.dirname(__FILE__) + "/template/hatena_preview_server.erb"), nil, "%-")
+  TEMPLATE = ERB.new(File.read(File.dirname(__FILE__) + "/templates/hatena_preview_server.erb"), nil, "%-")
 
   def initialize(server, path)
     super
