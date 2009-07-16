@@ -1,9 +1,16 @@
 require "webrick"
 require "text/hatena"
 require "erb"
+require "github_client"
+require "pp"
+require "hatena_preview_handler"
+require "github_browser_servlet"
 
 class HatenaPreviewServer
   DEFAULT_PORT = 8080
+
+  SOURCES = %w{github_browser_servlet.rb hatena_preview_handler.rb}
+  AUTO_RELOAD = true
 
   def self.start(root, port) 
     port ||= DEFAULT_PORT
@@ -18,36 +25,37 @@ class HatenaPreviewServer
     end
 
     WEBrick::HTTPServlet::FileHandler.add_handler("txt", HatenaPreviewHandler)
+    server.mount("/github", GithubBrowserServlet)
     server.start
   end
-end
 
-# WEBrick::HTTPServlet::AbstractServlet
-class HatenaPreviewHandler < WEBrick::HTTPServlet::DefaultFileHandler
-  include ERB::Util
 
-  TEMPLATE = ERB.new(File.read(File.dirname(__FILE__) + "/hatena_preview_server.erb"), nil, "%-")
-
-  def initialize(server, path)
-    super
-    @local_path = path
-  end
-
-  def do_GET(req,res)
-    if @local_path !~ %r{/(\d{4}-\d{2}-\d{2})(?:-.+)?\.txt$}
-      super
-      return
+  def self.autoreload
+    mtime = {}
+    loop do
+      begin
+        dir = File.dirname(__FILE__)
+        SOURCES.each do |f|
+          path = dir + "/" + f
+          mt = File.stat(path).mtime
+          if mtime[f] != mt
+            mtime[f] = mt
+            puts "reload #{f}"
+            load path
+          end
+        end
+        sleep 1
+      rescue => e
+        p e
+        sleep 5
+      end
     end
-    date = Time.parse($1)
-    
-    src = File.read(@local_path)
-    (title, body) = src.split(/\r\n|\r|\n/, 2)
-
-    parser = Text::Hatena.new
-    parser.parse(body)
-    body = parser.html
-
-    res['Content-Type'] = "text/html"
-    res.body = TEMPLATE.result(binding)
   end
+
+  if AUTO_RELOAD
+    Thread.new do
+      HatenaPreviewServer.autoreload
+    end
+  end
+
 end
