@@ -17,8 +17,8 @@ end
 desc "指定した日付の記事をロードします。rake load@2009-06-30"
 task :load,[:date] do |t, args|
   raise "Usage: rake load@YYYY-MM-DD" unless args.date
-  date = dateargs(args)
-  system("#{HW} -l #{date}")
+  date = Time.parse(args.date)
+  system("#{HW} -l #{date.strftime("%Y-%m-%d")}")
 end
 
 desc "はてなダイアリーを更新します(ちょっとした更新)。"
