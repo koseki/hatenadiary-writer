@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+<ModulePrefs
+  title="この記事の履歴"
+  description="Github Recent Commits"
+  author="KOSEKI Kengo"
+  author_email="koseki@gmail.com"
+  title_url="http://github.com/"
+  width="450"
+  height="180"
+   />
+<UserPref name="user" display_name="User name" datatype="string"/>
+<UserPref name="repo" display_name="Repository name" datatype="string"/>
+<UserPref name="branch" display_name="Branch name" datatype="string"/>
+<UserPref name="path" display_name="Path" datatype="string"/>
+
+<Content type="html">
+<![CDATA[
+<style>
+#content_div {font-size: 80%; margin: 5px;}
+
+</style>
+<div id="content_div"></div>
+<script type="text/javascript">
+
+var prefs = new _IG_Prefs();
+var user = prefs.getString("user");
+var repo = prefs.getString("repo");
+var branch = prefs.getString("branch");
+var path = prefs.getString("path");
+
+if (user == "") {
+  var user = "koseki";
+  var repo = "hatenadiary-koseki2";
+  var branch = "master";
+  var path = "/2009-05-30-JsIdiom.txt";
+}
+
+var uri = "http://github.com/api/v2/xml/commits/list/" + user + "/" + repo + "/" + branch + path;
+
+function nodeContent(parent, name) {
+  return parent.getElementsByTagName(name)[0].textContent;
+}
+
+var cb = function(doc) {
+  var html = ["<ul>"];
+  var commits = doc.firstChild.getElementsByTagName("commit");
+  for (var i = 0; i < commits.length; i++) {
+    var c = commits[i];
+    var url = nodeContent(c,"url");
+    var msg = nodeContent(c,"message");
+    var date = nodeContent(c,"committed-date").substr(0,10);
+    html.push("<li><a href=\""+ url + "\">" + _hesc(date) + "</a> " + _hesc(msg) + "</li>");
+  }
+  html.push("</ul>");
+  html = html.join("\n");
+  _gel("content_div").innerHTML = html;
+}
+_IG_FetchXmlContent(uri, cb);
+
+</script>
+]]>
+</Content>
+</Module>
+
