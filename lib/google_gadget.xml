@@ -6,8 +6,9 @@
   author="KOSEKI Kengo"
   author_email="koseki@gmail.com"
   title_url="http://github.com/"
-  width="450"
-  height="180"
+  width="500"
+  height="100"
+  scrolling="true"
    />
 <UserPref name="user" display_name="User name" datatype="string"/>
 <UserPref name="repo" display_name="Repository name" datatype="string"/>
@@ -18,7 +19,6 @@
 <![CDATA[
 <style>
 #content_div {font-size: 80%; margin: 5px;}
-
 </style>
 <div id="content_div"></div>
 <script type="text/javascript">
@@ -43,16 +43,15 @@ function nodeContent(parent, name) {
 }
 
 var cb = function(doc) {
-  var html = ["<ul>"];
+  var html = [""];
   var commits = doc.firstChild.getElementsByTagName("commit");
   for (var i = 0; i < commits.length; i++) {
     var c = commits[i];
     var url = nodeContent(c,"url");
     var msg = nodeContent(c,"message");
     var date = nodeContent(c,"committed-date").substr(0,10);
-    html.push("<li><a href=\""+ url + "\">" + _hesc(date) + "</a> " + _hesc(msg) + "</li>");
+    html.push("<a href=\""+ url + "\" target=\"_parent\">" + _hesc(date) + "</a> " + _hesc(msg) + "<br />");
   }
-  html.push("</ul>");
   html = html.join("\n");
   _gel("content_div").innerHTML = html;
 }
