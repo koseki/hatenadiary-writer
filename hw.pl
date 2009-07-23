@@ -365,6 +365,15 @@ sub login() {
         }
     }
 
+    # Check to exist <meta http-equiv="refresh" content="1;URL=..." />
+    unless (defined $r->header('refresh')) {
+        print_debug("failed to login. retry...");
+        # $username = '';    # needless?
+        $password = '';
+        # Retry to login.
+        goto &login;
+    }
+
     print_message("Login OK.");
 
     print_debug("login: Making cookie jar.");
