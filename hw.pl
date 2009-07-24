@@ -21,7 +21,7 @@
 #    http://d.hatena.ne.jp/koseki2/
 #
 use strict;
-my $VERSION = "1.4.1.2";
+my $VERSION = "1.4.1.3";
 
 use LWP::UserAgent;
 use HTTP::Request::Common;
